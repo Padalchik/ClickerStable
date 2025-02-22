@@ -17,7 +17,13 @@
 		border-radius: 10px;
 		text-align: center;
 		display: none;
+        transition: opacity 0.5s ease;
 	}
+
+    #unity-loading-bar.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
 
 	#unity-progress-bar-empty {
 		width: 100%;
@@ -33,6 +39,13 @@
 		background: #4caf50;
 		transition: width 0.3s ease;
 	}
+
+    #unity-logo {
+        width: 100px;
+        height: 100px;
+        background: url('logo.png') center/contain no-repeat;
+        margin: 0 auto 10px auto;
+    }
 	</style>
 
     <!-- Подключаем Telegram API -->
@@ -58,33 +71,32 @@
                 if (typeof createUnityInstance !== "undefined") {
                     let loadingBar = document.querySelector("#unity-loading-bar");
                     if (loadingBar) {
-                        loadingBar.style.display = "block"; // Показываем прогресс-бар перед загрузкой
+                        loadingBar.style.display = "block";
                     }
 
                     createUnityInstance(document.querySelector("#unity-canvas"), config, (progress) => {
                         let progressBar = document.querySelector("#unity-progress-bar-full");
                         if (progressBar) {
                             progressBar.style.width = `${100 * progress}%`;
-                        } else {
-                            console.warn("⚠️ Прогресс-бар не найден!");
                         }
                     }).then((instance) => {
                         window.unityInstance = instance;
-                        console.log("✅ Unity загружен!");
+                        console.log("[Unity] ✅ Unity загружен!");
 
-                        // Скрываем прогресс-бар после загрузки
                         if (loadingBar) {
-                            loadingBar.style.display = "none";
+                            loadingBar.classList.add("hidden");
+                            setTimeout(() => { loadingBar.style.display = "none"; }, 500);
                         }
                     }).catch((err) => {
-                        console.error("❌ Ошибка загрузки Unity:", err);
+                        console.error("[Unity] ❌ Ошибка загрузки Unity:", err);
                     });
                 } else {
-                    console.error("❌ createUnityInstance не найден!");
+                    console.error("[Unity] ❌ createUnityInstance не найден!");
                 }
             };
+
             script.onerror = (err) => {
-                console.error("❌ Ошибка загрузки `Build.loader.js`:", err);
+                console.error("[Unity] ❌ Ошибка загрузки `Build.loader.js`:", err);
             };
 
             document.body.appendChild(script);
@@ -92,7 +104,7 @@
 
         function RequestTelegramUserID() {
             if (!window.Telegram || !window.Telegram.WebApp) {
-                console.error("❌ Telegram API не доступен!");
+                console.error("[TG] ❌ Telegram API не доступен!");
                 return;
             }
 
@@ -100,19 +112,26 @@
             tg.expand();
             let userID = tg.initDataUnsafe?.user?.id || 0;
 
-            console.log("📡 Получен userID из Telegram:", userID);
+            console.log("[TG] 📡 Получен userID из Telegram:", userID);
 
             if (!userID || userID === 0) {
-                console.warn("⚠️ userID не получен, возможно, Telegram WebApp не передаёт данные.");
+                console.warn("[TG] ⚠️ userID не получен, возможно, Telegram WebApp не передаёт данные.");
             }
+
+            let attempts = 0; // Количество попыток отправки userID
 
             function sendToUnity() {
                 if (window.unityInstance) {
-                    console.log("📡 Отправляем userID в Unity:", userID);
+                    console.log("[Unity] 📡 Отправляем userID в Unity:", userID);
                     window.unityInstance.SendMessage("ClickerManager", "SetUserIDFromJS", userID.toString());
                 } else {
-                    console.log("⏳ Ожидание Unity...");
-                    setTimeout(sendToUnity, 1000);
+                    attempts++;
+                    if (attempts < 10) { // Не больше 10 попыток
+                        console.log(`[Unity] ⏳ Ожидание Unity (${attempts}/10)...`);
+                        setTimeout(sendToUnity, 1000);
+                    } else {
+                        console.error("[Unity] ❌ Не удалось отправить userID: Unity не загружен!");
+                    }
                 }
             }
 
