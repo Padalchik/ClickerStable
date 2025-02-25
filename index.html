@@ -137,6 +137,20 @@
 
             setTimeout(sendToUnity, 500);
         }
+
+		function TelegramVibrate() {
+			if (window.Telegram && window.Telegram.WebApp) {
+				if (window.Telegram.WebApp.platform === "ios") {
+					console.log("📳 Вибрация через Telegram API (iOS)");
+					window.Telegram.WebApp.HapticFeedback.impactOccurred("medium"); 
+				} else if (window.Telegram.WebApp.platform === "android" && navigator.vibrate) {
+					console.log("📳 Вибрация через стандартный API (Android)");
+					navigator.vibrate(50); // Вибрация 50 мс
+				} else {
+					console.warn("⚠️ Вибрация недоступна: Telegram API не поддерживается!");
+				}
+			}
+		}
     </script>
 </head>
 <body>
